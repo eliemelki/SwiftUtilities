@@ -8,13 +8,13 @@
 
 import Foundation
 
-actor URLProtocolStubRegistry {
+actor MockURLProtocolStubRegistry {
     typealias Matcher = (URLRequest) -> Bool
     typealias Responder = (URLRequest) throws -> (HTTPURLResponse, Data, TimeInterval)
 
     private var routes: [(Matcher, Responder)] = []
     
-    static let shared = URLProtocolStubRegistry()
+    static let shared = MockURLProtocolStubRegistry()
 
     func add(matching: @escaping Matcher, respond: @escaping Responder) {
         routes.append((matching, respond))
@@ -48,7 +48,7 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
        
         Task {
             do {
-                let result = try await URLProtocolStubRegistry.shared.response(for: self.request)
+                let result = try await MockURLProtocolStubRegistry.shared.response(for: self.request)
                 guard let (resp, data, delay) = result else {
                     self.client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
                     return
