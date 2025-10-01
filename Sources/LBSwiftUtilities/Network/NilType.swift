@@ -6,4 +6,4 @@
 //
 
 
-public struct NilType: Codable {}
+public struct NilType: Codable, Sendable {}

@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - Multipart Builder
 
-public enum MultipartForm {
+public enum MultipartForm: Sendable {
     public struct Part {
         public enum Body {
             case data(Data)

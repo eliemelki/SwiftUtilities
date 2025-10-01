@@ -6,7 +6,7 @@
 //
 import Foundation
 
-public struct QueryEncoder {
+public struct QueryEncoder: Sendable {
     public init() {}
     
     public func encode<T: Encodable>(_ value: T) throws -> [URLQueryItem] {
