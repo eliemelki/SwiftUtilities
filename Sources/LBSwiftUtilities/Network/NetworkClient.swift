@@ -11,8 +11,11 @@ import Security
 
 // MARK: - Public Types
 
-public enum HTTPMethod: String { case GET, POST, HEAD }
-
+public enum HTTPMethod: String, Sendable {
+    case GET
+    case POST
+    case HEAD
+}
 
 
 public protocol NetworkClient: Sendable {
@@ -32,7 +35,7 @@ public protocol NetworkClient: Sendable {
                                        headers: [String: String]) async throws -> T
 }
 
-public protocol NetworkClientFactory {
+public protocol NetworkClientFactory: Sendable {
     func makeClient(config: NetworkConfiguration, interceptors: [NetworkInterceptor]) -> NetworkClient
 }
 // DefaultNetworkClient.swift — with documentation comments and a test-only initializer
