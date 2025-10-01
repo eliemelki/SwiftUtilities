@@ -7,7 +7,7 @@
 import Foundation
 
 
-public protocol NetworkInterceptor: AnyObject {
+public protocol NetworkInterceptor: Sendable {
     /// Inspect/modify request before sending.
     func adapt(_ request: URLRequest) async throws -> URLRequest
     /// Observe the result (for logging/metrics/auth refresh etc.)

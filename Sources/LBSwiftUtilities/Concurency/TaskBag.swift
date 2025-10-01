@@ -6,7 +6,7 @@
 //
 import Foundation
 
-public protocol CancellableTask {
+public protocol CancellableTask: Sendable {
     var id: UUID { get }
     func cancel() async
 }

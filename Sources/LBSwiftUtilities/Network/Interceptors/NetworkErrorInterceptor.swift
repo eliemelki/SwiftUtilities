@@ -7,7 +7,7 @@
 
 import Foundation
 
-public class NetworkErrorInterceptor: NetworkInterceptor {
+public final class NetworkErrorInterceptor: NetworkInterceptor {
     private let logger: NetworkLogger
     
     public init(logger: NetworkLogger) {

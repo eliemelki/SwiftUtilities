@@ -15,7 +15,7 @@ public enum HTTPMethod: String { case GET, POST, HEAD }
 
 
 
-public protocol NetworkClient {
+public protocol NetworkClient: Sendable {
     func get<Q: Encodable, T: Decodable>(_ path: String,
                                          query: Q?,
                                          headers: [String: String]) async throws -> T
@@ -136,8 +136,8 @@ public final class DefaultNetworkClient {
         if let q = query {
             try appendQuery(&req, query: q)
         }
-        _ = try await send(req, expectBody: false)
-        guard let http = lastHTTPURLResponse else { throw NetworkError.invalidURL } // defensive
+        let result = try await send(req, expectBody: false)
+        guard let http = result.1 else { throw NetworkError.invalidURL } // defensive
         return http
     }
     
@@ -183,9 +183,6 @@ public final class DefaultNetworkClient {
         return try decode(data, as: T.self)
     }
     
-    // MARK: - Core send/receive
-    
-    private var lastHTTPURLResponse: HTTPURLResponse?
     
     /// Applies each interceptor's `adapt` in-order to the request.
     private func applyRequestInterceptors(_ request: URLRequest) async throws -> URLRequest {
@@ -199,8 +196,7 @@ public final class DefaultNetworkClient {
     /// Sends the request and enforces error semantics.
     /// - Parameter expectBody: If `false`, a body is not required and won’t be surfaced on success.
     @discardableResult
-    private func send(_ originalRequest: URLRequest, expectBody: Bool = true) async throws -> Data {
-        
+    private func send(_ originalRequest: URLRequest, expectBody: Bool = true) async throws -> (Data, HTTPURLResponse?) {
         let isOkayToProceedWithProxy = config.allowProxy || !networkUtils.isUsingProxy()
         guard isOkayToProceedWithProxy else {
             throw NetworkError.proxyNotAllowed
@@ -210,7 +206,6 @@ public final class DefaultNetworkClient {
         
         do {
             let (data, response) = try await session.data(for: adapted)
-            lastHTTPURLResponse = response as? HTTPURLResponse
             // Response interceptors (notify all)
             await notifyInterceptors(.success((data, response)), for: adapted)
             
@@ -220,7 +215,8 @@ public final class DefaultNetworkClient {
             guard (200..<300).contains(http.statusCode) else {
                 throw NetworkError.server(statusCode: http.statusCode, data: expectBody ? data : nil, response: http)
             }
-            return expectBody ? data : Data()
+            let value = expectBody ? data : Data()
+            return (value, response as? HTTPURLResponse)
         } catch {
             // Notify interceptors about failure
             await notifyInterceptors(.failure(error), for: adapted)
@@ -229,6 +225,16 @@ public final class DefaultNetworkClient {
             }
             throw error
         }
+    }
+    
+    
+    /// Sends the request and enforces error semantics.
+    /// - Parameter expectBody: If `false`, a body is not required and won’t be surfaced on success.
+    @discardableResult
+    private func send(_ originalRequest: URLRequest) async throws -> Data {
+        
+        let result = try await send(originalRequest, expectBody: true)
+        return result.0
     }
     
     /// Decodes `Data` into `T` using `configuration.jsonDecoder`, wrapping any failure in `.decoding`.
@@ -287,7 +293,7 @@ public final class DefaultNetworkClient {
 // MARK: - Session Delegate with SSL Pinning
 
 /// `URLSessionDelegate` that enforces the configured SSL pinning policy.
-internal final class NetworkSessionDelegate: NSObject, URLSessionDelegate {
+internal final class NetworkSessionDelegate: NSObject, URLSessionDelegate, Sendable {
     private let policy: SSLPinning
     
     init(policy: SSLPinning) {

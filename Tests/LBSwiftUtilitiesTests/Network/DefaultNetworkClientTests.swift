@@ -220,9 +220,15 @@ final class DefaultNetworkClientTests: XCTestCase {
         let client = makeClient(interceptors: [trace, trace2])
         struct Empty: Decodable {}
         _ = try await client.get("/ok", query: NilType()) as Empty
-        XCTAssertEqual(trace.events, ["adapt", "receiveSuccess"])
-        XCTAssertEqual(trace2.events, ["adapt", "receiveSuccess"])
-        XCTAssertLessThan(trace.adaptCallTime!, trace2.adaptCallTime!) // order preserved
+        let traceEvents = await trace.events
+        let traceEvents2 = await trace.events
+        let adaptCallTime1 = await trace.adaptCallTime
+        let adaptCallTime2 = await trace2.adaptCallTime
+        
+        
+        XCTAssertEqual(traceEvents, ["adapt", "receiveSuccess"])
+        XCTAssertEqual(traceEvents2, ["adapt", "receiveSuccess"])
+        XCTAssertLessThan(adaptCallTime1!, adaptCallTime2!) // order preserved
     }
 
     func testInterceptors_receiveOnFailure() async {
@@ -237,7 +243,8 @@ final class DefaultNetworkClientTests: XCTestCase {
         } catch {
             // swallow
         }
-        XCTAssertEqual(trace.events, ["adapt", "receiveFailure"])
+        let traceEvents = await trace.events
+        XCTAssertEqual(traceEvents, ["adapt", "receiveFailure"])
     }
 
     // MARK: Tests — multipart
@@ -350,7 +357,7 @@ final class DefaultNetworkClientTests: XCTestCase {
 
 // MARK: - Test Interceptor
 
-final class TraceInterceptor: NetworkInterceptor {
+actor TraceInterceptor: NetworkInterceptor {
     let id: String
     private(set) var events: [String] = []
     private(set) var adaptCallTime: TimeInterval?

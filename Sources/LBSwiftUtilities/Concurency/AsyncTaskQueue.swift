@@ -6,15 +6,6 @@
 //
 import Foundation
 
-// 1) The backing actor that will own the executor
-public actor NetworkActorImpl {}
-
-// 2) The global-actor declaration that exposes a single shared instance
-@globalActor
-public struct NetworkActor {
-    public static let shared = NetworkActorImpl()
-}
-
 /// A lightweight async task queue with **serial** or **bounded concurrent** execution.
 ///
 /// - Uses an `AsyncSemaphore` internally to cap the number of tasks that may run in parallel.

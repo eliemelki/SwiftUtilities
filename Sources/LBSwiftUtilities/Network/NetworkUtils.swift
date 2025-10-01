@@ -7,11 +7,11 @@
 
 import Foundation
 
-public protocol NetworkUtils {
+public protocol NetworkUtils: Sendable {
     func isUsingProxy() -> Bool
 }
 
-public class DefaultNetworkUtils : NetworkUtils {
+public final class DefaultNetworkUtils : NetworkUtils {
     public init() {
         
     }

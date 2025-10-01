@@ -6,13 +6,17 @@
 //
 import Foundation
 
-public struct ProxyConfiguration {
-    public enum Kind { case http, https, socks }
-    public var host: String
-    public var port: Int
-    public var kind: Kind
-    public var username: String?
-    public var password: String?
+public struct ProxyConfiguration: Sendable {
+    public enum Kind: Sendable {
+        case http
+        case https
+        case socks
+    }
+    public let host: String
+    public let port: Int
+    public let kind: Kind
+    public let username: String?
+    public let password: String?
     
     public init(host: String, port: Int, kind: Kind = .http, username: String? = nil, password: String? = nil) {
         self.host = host

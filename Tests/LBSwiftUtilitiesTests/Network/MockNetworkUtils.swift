@@ -6,7 +6,7 @@
 //
 @testable import LBSwiftUtilities
 
-class MockNetworkUtils: NetworkUtils {
+final class MockNetworkUtils: NetworkUtils {
   
     
     let isProxy: Bool
