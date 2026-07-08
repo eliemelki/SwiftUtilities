@@ -23,8 +23,4 @@ let package = Package(
         ),
     ]
 )
-for target in package.targets {
-    var settings = target.swiftSettings ?? []
-    settings.append(.unsafeFlags(["-Xfrontend", "-strict-concurrency=minimal"]))
-    target.swiftSettings = settings
-}
+
