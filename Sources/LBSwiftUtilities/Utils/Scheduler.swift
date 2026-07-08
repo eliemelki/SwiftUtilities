@@ -8,7 +8,7 @@
 
 import Foundation
 
-public protocol Scheduler {
+public protocol Scheduler: Sendable {
     func run<T>(_ op: @Sendable @escaping () async throws -> T) async throws -> T
     func run<T>(_ op: @Sendable @escaping () async throws -> T) async throws -> CancellableTask
     func cancelAll()
