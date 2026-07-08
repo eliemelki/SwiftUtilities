@@ -16,7 +16,7 @@ final class DefaultNetworkClientTests: XCTestCase {
     // MARK: Harness
 
     override func tearDown() async throws {
-        await MockURLProtocolStubRegistry.shared.removeAll()
+         MockURLProtocolStubRegistry.shared.removeAll()
     }
 
     private func makeClient(
@@ -56,7 +56,7 @@ final class DefaultNetworkClientTests: XCTestCase {
         let expected = Todo(id: 1, title: "Hello")
         let body = try JSONEncoder().encode(expected)
 
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/todos" && $0.httpMethod == "GET" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/todos" && $0.httpMethod == "GET" }) { req in
             XCTAssertEqual(req.httpMethod, "GET")
             let url = req.url!.absoluteString
             XCTAssertTrue(url.hasPrefix("https://example.com/todos"))
@@ -70,7 +70,7 @@ final class DefaultNetworkClientTests: XCTestCase {
     }
 
     func testGET_appendsQueryItems() async throws {
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/search" && $0.httpMethod == "GET" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/search" && $0.httpMethod == "GET" }) { req in
             let qs = req.url!.query ?? ""
             // Order is not guaranteed, so check both key/value pairs exist
             XCTAssertTrue(qs.contains("a=1"))
@@ -126,7 +126,7 @@ final class DefaultNetworkClientTests: XCTestCase {
 
     func testHEAD_returnsHTTPURLResponse() async throws {
         let headers = ["X-From-Server": "1"]
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/ping" && $0.httpMethod == "HEAD" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/ping" && $0.httpMethod == "HEAD" }) { req in
             XCTAssertEqual(req.httpMethod, "HEAD")
             let resp = HTTPURLResponse(url: req.url!, statusCode: 204, httpVersion: nil, headerFields: headers)!
             return (resp, Data(),0)
@@ -139,7 +139,7 @@ final class DefaultNetworkClientTests: XCTestCase {
 
     func testServerError_exposesStatusCodeAndBody() async {
         let body = Data("{\"message\":\"boom\"}".utf8)
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/oops" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/oops" }) { req in
             let resp = HTTPURLResponse(url: req.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             return (resp, body, 0)
         }
@@ -162,7 +162,7 @@ final class DefaultNetworkClientTests: XCTestCase {
 
     func testDecodingErrorWrapsData() async {
         // Return invalid JSON for Todo
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/bad-json" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/bad-json" }) { req in
             let resp = HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             return (resp, Data("not-json".utf8),0)
         }
@@ -183,7 +183,7 @@ final class DefaultNetworkClientTests: XCTestCase {
     }
 
     func testTransportErrorMapsToNetworkErrorTransport() async {
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/slow" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/slow" }) { req in
             throw URLError(.timedOut)
         }
         let client = makeClient()
@@ -203,7 +203,7 @@ final class DefaultNetworkClientTests: XCTestCase {
     }
 
     func testHeaders_mergeDefaultAndOverrides() async throws {
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/hdrs" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/hdrs" }) { req in
             XCTAssertEqual(req.value(forHTTPHeaderField: "X-Default"), "D")
             XCTAssertEqual(req.value(forHTTPHeaderField: "X-Call"), "C")
             let resp = HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
@@ -219,7 +219,7 @@ final class DefaultNetworkClientTests: XCTestCase {
     func testInterceptors_orderAndReceiveCallbacks() async throws {
         let trace: TraceInterceptor = .init(id: "A")
         let trace2: TraceInterceptor = .init(id: "B")
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/ok" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/ok" }) { req in
             let resp = HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             return (resp, Data("{}".utf8),0)
         }
@@ -239,7 +239,7 @@ final class DefaultNetworkClientTests: XCTestCase {
 
     func testInterceptors_receiveOnFailure() async {
         let trace = TraceInterceptor(id: "A")
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/offline" }) { _ in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/offline" }) { _ in
             throw URLError(.notConnectedToInternet)
         }
         let client = makeClient(interceptors: [trace])
@@ -257,7 +257,7 @@ final class DefaultNetworkClientTests: XCTestCase {
 
     func testMultipart_setsContentTypeAndBodyContainsBoundaryAndFields() async throws {
         // Arrange a handler that inspects body and headers
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/upload" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/upload" }) { req in
             XCTAssertEqual(req.httpMethod, "POST")
             let ct = req.value(forHTTPHeaderField: "Content-Type") ?? ""
             XCTAssertTrue(ct.contains("multipart/form-data"))
@@ -280,7 +280,7 @@ final class DefaultNetworkClientTests: XCTestCase {
     // MARK: Tests — proxy gating
 
     func testProxyGating_deniesWhenProxyDetectedAndNotAllowed() async {
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/any" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/any" }) { req in
             let resp = HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             return (resp, Data("{}".utf8),0)
         }
@@ -296,7 +296,7 @@ final class DefaultNetworkClientTests: XCTestCase {
     }
 
     func testProxyGating_allowsWhenNoProxyOrAllowed() async throws {
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/no-proxy" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/no-proxy" }) { req in
             let resp = HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             return (resp, Data("{}".utf8),0)
         }

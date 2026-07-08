@@ -8,26 +8,39 @@
 
 import Foundation
 
-final class MockURLProtocolStubRegistry {
-    typealias Matcher = (URLRequest) -> Bool
-    typealias Responder = (URLRequest) throws -> (HTTPURLResponse, Data, TimeInterval)
-    
+
+final class MockURLProtocolStubRegistry: @unchecked Sendable {
+    typealias Matcher = @Sendable (URLRequest) -> Bool
+    typealias Responder = @Sendable (URLRequest) throws -> (HTTPURLResponse, Data, TimeInterval)
+
+   static let shared = MockURLProtocolStubRegistry()
+
+    private let lock = NSLock()
     private var routes: [(Matcher, Responder)] = []
-    
-    nonisolated(unsafe) static let shared = MockURLProtocolStubRegistry()
-    
+
+    private init() {}
+
     func add(matching: @escaping Matcher, respond: @escaping Responder) {
+        lock.lock()
         routes.append((matching, respond))
+        lock.unlock()
     }
-    
+
     func removeAll() {
+        lock.lock()
         routes.removeAll()
+        lock.unlock()
     }
-    
-    func response(for request: URLRequest) throws -> (HTTPURLResponse, Data, TimeInterval)?   {
-        for (m, r) in routes where m(request) {
-            return try r(request)
+
+    func response(for request: URLRequest) throws -> (HTTPURLResponse, Data, TimeInterval)? {
+        lock.lock()
+        let routesCopy = routes
+        lock.unlock()
+
+        for (matcher, responder) in routesCopy where matcher(request) {
+            return try responder(request)
         }
+
         return nil
     }
 }
