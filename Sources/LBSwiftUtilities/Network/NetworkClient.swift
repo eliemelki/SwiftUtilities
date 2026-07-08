@@ -71,7 +71,7 @@ import Foundation
 /// - Non-2xx HTTP status codes → `.server(statusCode:data:response)`
 /// - JSON encoding errors → `.serialization(Error)`
 /// - JSON decoding errors → `.decoding(Error, data: Data)`
-public final class DefaultNetworkClient {
+public final class DefaultNetworkClient: NetworkClient {
     private let config: NetworkConfiguration
     private let session: URLSession
     private let sessionDelegate: NetworkSessionDelegate
