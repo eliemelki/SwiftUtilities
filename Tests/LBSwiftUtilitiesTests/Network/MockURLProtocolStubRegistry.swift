@@ -8,22 +8,22 @@
 
 import Foundation
 
-actor MockURLProtocolStubRegistry {
+final class MockURLProtocolStubRegistry {
     typealias Matcher = (URLRequest) -> Bool
     typealias Responder = (URLRequest) throws -> (HTTPURLResponse, Data, TimeInterval)
-
+    
     private var routes: [(Matcher, Responder)] = []
     
-    static let shared = MockURLProtocolStubRegistry()
-
+    nonisolated(unsafe) static let shared = MockURLProtocolStubRegistry()
+    
     func add(matching: @escaping Matcher, respond: @escaping Responder) {
         routes.append((matching, respond))
     }
-
+    
     func removeAll() {
         routes.removeAll()
     }
-
+    
     func response(for request: URLRequest) throws -> (HTTPURLResponse, Data, TimeInterval)?   {
         for (m, r) in routes where m(request) {
             return try r(request)
@@ -31,6 +31,7 @@ actor MockURLProtocolStubRegistry {
         return nil
     }
 }
+
 
 final class MockURLProtocol: URLProtocol, @unchecked Sendable {
     
@@ -43,29 +44,45 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest {
         request
     }
-
+    
+    
     override func startLoading() {
-       
-        Task {
-            do {
-                let result = try await MockURLProtocolStubRegistry.shared.response(for: self.request)
-                guard let (resp, data, delay) = result else {
-                    self.client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
-                    return
-                }
-                // simulate latency
-                if delay > 0 {
-                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                }
-                self.client?.urlProtocol(self, didReceive: resp, cacheStoragePolicy: .notAllowed)
-                if !data.isEmpty { self.client?.urlProtocol(self, didLoad: data) }
-                self.client?.urlProtocolDidFinishLoading(self)
-            }catch {
-                self.client?.urlProtocol(self, didFailWithError: error)
+        
+        let request = self.request
+        
+        guard let client = self.client else { return }
+        do {
+            let result = try MockURLProtocolStubRegistry.shared.response(for: request)
+            
+            guard let (resp, data, delay) = result else {
+                
+                client.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
+                return
             }
+            
+            let callback: @Sendable () -> Void = { [weak self] in
+
+                guard let self else { return }
+                client.urlProtocol(self, didReceive: resp, cacheStoragePolicy: .notAllowed)
+                if !data.isEmpty { client.urlProtocol(self, didLoad: data) }
+                client.urlProtocolDidFinishLoading(self)
+            }
+            // simulate latency
+            if delay > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        callback()
+                }
+            }else {
+                DispatchQueue.main.async {
+                     callback()
+                }
+            }
+            
+        }catch {
+            client.urlProtocol(self, didFailWithError: error)
         }
     }
-
+    
     override func stopLoading() { /* no-op */ }
 }
 
@@ -101,3 +118,4 @@ public extension URLRequest {
         return nil
     }
 }
+

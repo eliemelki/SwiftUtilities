@@ -82,11 +82,17 @@ final class DefaultNetworkClientTests: XCTestCase {
         struct Empty: Decodable {}
         _ = try await client.get("/search", query: Query(a: 1, b: "two")) as Empty
     }
+    struct User: Sendable {
 
+        var age: Int
+
+    }
+    
+ 
     func testPOST_setsContentTypeAndSerializesBody() async throws {
         let expected = Todo(id: 2, title: "Created")
         let body = try JSONEncoder().encode(expected)
-        await MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/todos" && $0.httpMethod == "POST" }) { req in
+        MockURLProtocolStubRegistry.shared.add(matching: { $0.url?.path == "/todos" && $0.httpMethod == "POST" }) { req in
             XCTAssertEqual(req.httpMethod, "POST")
             XCTAssertEqual(req.value(forHTTPHeaderField: "Content-Type"), "application/json; charset=utf-8")
             XCTAssertNotNil(req.extractHTTPBody())
